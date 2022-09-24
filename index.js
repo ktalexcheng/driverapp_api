@@ -8,6 +8,10 @@ const app = express();
 // Use express.json() middleware to accept JSON as body
 app.use(express.json());
 
+app.get('/', (req, res) => {
+    res.send('Welcome to the DriverApp API!');
+});
+
 // Set up middleware for routing
 const rideRouter = require('./route/rides');
 // Use rideRouter whenever URI ends in /rides
