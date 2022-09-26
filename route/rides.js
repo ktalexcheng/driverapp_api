@@ -20,11 +20,11 @@ async function findRideByID(req, res, next) {
     next();
 }
 
-
 // Get all
 router.get('/', async (req, res) => {
     try {
-        const rides = await Ride.find();
+        // rideData not included with this call to reduce network IO
+        const rides = await Ride.find({}, { rideData: 0 });
         res.json(rides);
     } catch (err) {
         res.status(500).json({ message: err.message });

@@ -5,8 +5,8 @@ const express = require('express');
 const app = express();
 
 // Middleware: what happens after server gets request but before passing to route
-// Use express.json() middleware to accept JSON as body
-app.use(express.json());
+// Use middleware to accept JSON as body
+app.use(express.json({ limit: '10mb' }));
 
 app.get('/', (req, res) => {
     res.send('Welcome to the DriverApp API!');
