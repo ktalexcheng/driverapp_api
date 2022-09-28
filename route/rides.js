@@ -42,7 +42,7 @@ async function findRideDataByRecordID(req, res, next) {
 // Get all
 router.get('/', async (req, res) => {
     try {
-        const rideRecord = await RideRecord.find().limit(20);
+        const rideRecord = await RideRecord.find().sort({ createdAt: -1 }).limit(20);
 
         res.json(rideRecord);
     } catch (err) {
@@ -54,6 +54,7 @@ router.get('/', async (req, res) => {
 router.get('/:rideObjID', [findRideRecordByID, findRideDataByRecordID], async (req, res) => {
     try{    
         res.json({
+            _id: res.rideRecord._id,
             rideName: res.rideRecord.rideName,
             rideDate: res.rideRecord.rideDate,
             rideData: res.rideData

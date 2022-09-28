@@ -4,6 +4,9 @@ const db = require('../database/connection');
 const rideRecordSchema = new mongoose.Schema({
     rideName: { type: String, required: true },
     rideDate: { type: Date, required: true }
-}, { collection: 'rideRecords' });
+}, { 
+    collection: 'rideRecords',
+    timestamps: true 
+});
 
 module.exports = db.model('rideRecord', rideRecordSchema);

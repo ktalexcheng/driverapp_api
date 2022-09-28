@@ -14,6 +14,9 @@ const rideDataSchema = new mongoose.Schema({
     gyroscopeX: Number,
     gyroscopeY: Number,
     gyroscopeZ: Number
-}, { collection: 'rideData' });
+}, { 
+    collection: 'rideData',
+    timestamps: true
+});
 
 module.exports = db.model('rideData', rideDataSchema);
