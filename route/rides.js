@@ -1,7 +1,11 @@
-const express = require('express');
+import dotenv from 'dotenv';
+import got from 'got';
+import express from 'express';
+import RideData from '../model/ride_data.js';
+import RideRecord from '../model/ride_record.js';
+
+dotenv.config();
 const router = express.Router();
-const RideData = require('../model/ride_data');
-const RideRecord = require('../model/ride_record');
 
 async function findRideRecordByID(req, res, next) {
     try {
@@ -14,7 +18,7 @@ async function findRideRecordByID(req, res, next) {
         next();
     } catch (err) {
         return res.status(500).json({ 
-            "middleware": "findRideRecordByID()", 
+            middleware: "findRideRecordByID()", 
             message: err.message 
         });
     }
@@ -33,7 +37,7 @@ async function findRideDataByRecordID(req, res, next) {
         next();
     } catch (err) {
         return res.status(500).json({ 
-            "middleware": "findRideDataByRecordID()", 
+            middleware: "findRideDataByRecordID()", 
             message: err.message 
         });
     }
@@ -68,22 +72,18 @@ router.get('/:rideObjID', [findRideRecordByID, findRideDataByRecordID], async (r
 
 // Create one
 router.post('/', async (req, res) => {
+    let rideRecord;
+    let allRideData = [];
+
     try {
         // Create new rideRecord document
-        const rideRecord = new RideRecord({
+        rideRecord = new RideRecord({
             rideName: req.body.rideName,
             rideDate: req.body.rideDate
         });
 
-        rideRecord.save(function(err) {
-            if (err) {
-                res.status(400).json(err);
-            } 
-        });
-
         // Create documents for rideData belonging to rideRecord
-        let allRideData = [];
-        for (var k in req.body.rideData) {
+        for (let k in req.body.rideData) {
             allRideData.push(new RideData({
                 timestamp: req.body.rideData[k].timestamp,
                 metadata: { rideRecordID: rideRecord._id },
@@ -98,16 +98,46 @@ router.post('/', async (req, res) => {
             }));
         }
 
-        RideData.collection.insertMany(allRideData, function(err, docs) {
+        // Insert data to collection
+        RideData.collection.insertMany(allRideData, function(err) {
             if (err) {
                 res.status(400).json(err);
-            } else {
-                res.status(201).json(docs);
             }
         });
     } catch (err) {
-        res.status(400);
+        res.status(400).json(err);
     }
+
+    // Evaluate ride and update rideRecord document with ride score using TrailBrake Judge service        
+    const judgeApiUrl = `${process.env.JUDGE_URL}/rideScore`;
+    const judgeApiOptions = {
+        json: {
+            rideData: allRideData
+        },
+        retry: {
+            limit: 0
+        }
+    };
+    
+    try {
+        const { rideScore } = await got.post(judgeApiUrl, judgeApiOptions).json();
+
+        // Update document object properties
+        rideRecord.rideScore = rideScore;
+    } catch (err) {
+        res.status(err.response.statusCode).json(JSON.parse(err.response.body));
+    }
+
+    rideRecord.save(function(err, doc) {
+        if (err) {
+            res.status(400).json(err);
+        } else {
+            res.status(201).json({
+                message: 'New ride successfully created',
+                rideRecord: doc
+            });
+        }
+    });
 });
 
 // Delete one
@@ -125,10 +155,10 @@ router.delete('/:rideObjID', findRideRecordByID, async (req, res) => {
         res.json({ message: 'Successfully deleted ride' });
     } catch (err) {
         res.status(500).json({ 
-            "method": "router.delete()", 
+            method: "router.delete()", 
             message: err.message 
         });
     }
 });
 
-module.exports = router;
+export default router;

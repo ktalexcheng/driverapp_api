@@ -1,7 +1,7 @@
 openapi: 3.0.1
 info:
-  title: DriverApp API
-  description: This is an API for DriverApp to create new and load old ride data.
+  title: TrailBrake API
+  description: This is an API for TrailBrake to create new and load old ride data.
   version: '0.1.0'
 servers:
   - url: https://driverapp-2022.de.r.appspot.com
@@ -25,7 +25,7 @@ paths:
             minimum: 0
       responses:
         '200':
-          description: Retrieved metadata for all availble rides
+          description: Retrieved metadata for all available rides
           content:
             application/json; charset=utf-8:
               schema:

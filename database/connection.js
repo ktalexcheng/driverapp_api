@@ -1,5 +1,11 @@
-require('dotenv').config();
-const mongoose = require('mongoose');
+import dotenv from 'dotenv';
+import mongoose from 'mongoose';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Configure connection to database
 mongoose.connect(process.env.DATABASE_URL, {
@@ -13,8 +19,8 @@ mongoose.connect(process.env.DATABASE_URL, {
 
 // Connect to database
 const db = mongoose.connection;
-db.on('error', (error) => console.error(error));
+db.on('error', (err) => console.error(err));
 db.once('open', () => console.log('Connected to MongoDB'));
 
 // Export to share a single connection
-module.exports = db;
+export default db;

@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const db = require('../database/connection');
+import mongoose from 'mongoose';
+import db from '../database/connection.js';
 
 const rideDataSchema = new mongoose.Schema({
     timestamp: Date,
@@ -19,4 +19,6 @@ const rideDataSchema = new mongoose.Schema({
     timestamps: true
 });
 
-module.exports = db.model('rideData', rideDataSchema);
+const rideDataSchemaModel = db.model('rideData', rideDataSchema);
+
+export default rideDataSchemaModel;

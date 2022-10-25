@@ -1,6 +1,6 @@
-require('dotenv').config();
-require('./database/connection');
-const express = require('express');
+import './database/connection.js';
+import express from 'express';
+import RideRouter from './route/rides.js';
 
 const app = express();
 
@@ -8,13 +8,13 @@ const app = express();
 // Use middleware to accept JSON as body
 app.use(express.json({ limit: '10mb' }));
 
+// Landing page
 app.get('/', (req, res) => {
-    res.send('Welcome to the DriverApp API!');
+    res.send('Welcome to the TrailBrake API!');
 });
 
-// Set up middleware for routing
-const rideRouter = require('./route/rides');
 // Use rideRouter whenever URI ends in /rides
-app.use('/rides', rideRouter);
+app.use('/rides', RideRouter);
 
+// Start server
 app.listen(8080, () => console.log('Server started'));

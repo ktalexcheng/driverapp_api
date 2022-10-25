@@ -1,12 +1,21 @@
-const mongoose = require('mongoose');
-const db = require('../database/connection');
+import mongoose from 'mongoose';
+import db from '../database/connection.js';
 
 const rideRecordSchema = new mongoose.Schema({
     rideName: { type: String, required: true },
-    rideDate: { type: Date, required: true }
+    rideDate: { type: Date, required: true },
+    rideScore: {
+        overall: Number,
+        speed: Number,
+        acceleration: Number,
+        braking: Number,
+        cornering: Number,
+    }
 }, { 
     collection: 'rideRecords',
     timestamps: true 
 });
 
-module.exports = db.model('rideRecord', rideRecordSchema);
+const rideRecordSchemaModel = db.model('rideRecord', rideRecordSchema);
+
+export default rideRecordSchemaModel;

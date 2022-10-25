@@ -1,8 +1,8 @@
-# DriverApp API
+# TrailBrake API
 
 ## Description
 
-DriverApp API is an API for creating and retrieving ride data for the DriverApp mobile application.
+TrailBrake API is an API for creating and retrieving ride data for the TrailBrake mobile application.
 
 ## Usage
 
