@@ -61,6 +61,8 @@ router.get('/:rideObjID', [findRideRecordByID, findRideDataByRecordID], async (r
             _id: res.rideRecord._id,
             rideName: res.rideRecord.rideName,
             rideDate: res.rideRecord.rideDate,
+            rideScore: res.rideRecord.rideScore,
+            rideMeta: res.rideRecord.rideMeta,
             rideData: res.rideData
         });
     } catch (err) {
@@ -120,10 +122,11 @@ router.post('/', async (req, res) => {
     };
     
     try {
-        const { rideScore } = await got.post(judgeApiUrl, judgeApiOptions).json();
+        const { rideScore, rideMeta } = await got.post(judgeApiUrl, judgeApiOptions).json();
 
         // Update document object properties
         rideRecord.rideScore = rideScore;
+        rideRecord.rideMeta = rideMeta;
     } catch (err) {
         res.status(err.response.statusCode).json(JSON.parse(err.response.body));
     }

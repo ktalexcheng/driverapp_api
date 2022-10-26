@@ -10,6 +10,11 @@ const rideRecordSchema = new mongoose.Schema({
         acceleration: Number,
         braking: Number,
         cornering: Number,
+    },
+    rideMeta: {
+        distance: Number,
+        duration: Number,
+        maxAcceleration: Number,
     }
 }, { 
     collection: 'rideRecords',
