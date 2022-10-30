@@ -7,7 +7,7 @@ const app = express();
 
 // Middleware: what happens after server gets request but before passing to route
 // Use middleware to accept JSON as body
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '100mb' }));
 
 // Landing page
 app.get('/', (req, res) => {
