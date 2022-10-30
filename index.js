@@ -1,6 +1,7 @@
 import './database/connection.js';
 import express from 'express';
 import RideRouter from './route/rides.js';
+import ProfileRouter from './route/profile.js';
 
 const app = express();
 
@@ -13,8 +14,11 @@ app.get('/', (req, res) => {
     res.send('Welcome to the TrailBrake API!');
 });
 
-// Use rideRouter whenever URI ends in /rides
+// Use RideRouter whenever URI ends in /rides
 app.use('/rides', RideRouter);
+
+// Use ProfileRouter whenever URI ends in /profile
+app.use('/profile', ProfileRouter);
 
 // Start server
 app.listen(8080, () => console.log('Server started'));
