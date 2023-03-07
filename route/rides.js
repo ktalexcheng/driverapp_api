@@ -3,15 +3,23 @@ import got from 'got';
 import express from 'express';
 import RideData from '../model/ride_data.js';
 import RideRecord from '../model/ride_record.js';
-import { findRideRecordByID, findRideDataByRecordID } from './middleware.js';
+import { findRideRecordByID, findRideDataByRecordID } from './middleware/rides_middleware.js';
 
 dotenv.config();
 const router = express.Router();
 
 // Get all
+// Endpoint sample: /rides?limit=20
 router.get('/', async (req, res) => {
+    let limitCount = req.query.limit ? parseInt(req.query.limit) : 20;
+
     try {
-        const rideRecord = await RideRecord.find().sort({ createdAt: -1 }).limit(20);
+        let rideRecord;
+        if (limitCount !== 0) {
+            rideRecord = await RideRecord.find().sort({ createdAt: -1 }).limit(limitCount);
+        } else {
+            rideRecord = await RideRecord.find().sort({ createdAt: -1 });
+        }
 
         res.json(rideRecord);
     } catch (err) {
@@ -21,7 +29,7 @@ router.get('/', async (req, res) => {
 
 // Get one
 router.get('/:rideObjID', [findRideRecordByID, findRideDataByRecordID], async (req, res) => {
-    try{    
+    try {
         res.json({
             _id: res.rideRecord._id,
             rideName: res.rideRecord.rideName,
@@ -31,8 +39,8 @@ router.get('/:rideObjID', [findRideRecordByID, findRideDataByRecordID], async (r
             rideData: res.rideData
         });
     } catch (err) {
-        return res.status(500).json({ 
-            message: err.message 
+        return res.status(500).json({
+            message: err.message
         });
     }
 });
@@ -66,7 +74,7 @@ router.post('/', async (req, res) => {
         }
 
         // Insert data to collection
-        RideData.collection.insertMany(allRideData, function(err) {
+        RideData.collection.insertMany(allRideData, function (err) {
             if (err) {
                 res.status(400).json(err);
             }
@@ -75,7 +83,7 @@ router.post('/', async (req, res) => {
         res.status(400).json(err);
     }
 
-    // Evaluate ride and update rideRecord document with ride score using TrailBrake Judge service        
+    // Evaluate ride and update rideRecord document with ride score using Trailbrake Judge service        
     const judgeApiUrl = `${process.env.JUDGE_URL}/rideScore`;
     const judgeApiOptions = {
         json: {
@@ -85,7 +93,7 @@ router.post('/', async (req, res) => {
             limit: 0
         }
     };
-    
+
     try {
         const { rideScore, rideMeta } = await got.post(judgeApiUrl, judgeApiOptions).json();
 
@@ -96,7 +104,7 @@ router.post('/', async (req, res) => {
         res.status(err.response.statusCode).json(JSON.parse(err.response.body));
     }
 
-    rideRecord.save(function(err, doc) {
+    rideRecord.save(function (err, doc) {
         if (err) {
             res.status(400).json(err);
         } else {
@@ -111,20 +119,20 @@ router.post('/', async (req, res) => {
 // Delete one
 router.delete('/:rideObjID', findRideRecordByID, async (req, res) => {
     try {
-        RideData.deleteMany({ 
+        RideData.deleteMany({
             'metadata.rideRecordID': res.rideRecord._id
-        }, function(err) {
+        }, function (err) {
             if (err) {
                 res.status(400).json(err);
-            } 
+            }
         });
         await res.rideRecord.remove();
 
         res.json({ message: 'Successfully deleted ride' });
     } catch (err) {
-        res.status(500).json({ 
-            method: "router.delete()", 
-            message: err.message 
+        res.status(500).json({
+            method: "router.delete()",
+            message: err.message
         });
     }
 });

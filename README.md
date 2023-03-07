@@ -1,8 +1,8 @@
-# TrailBrake API
+# Trailbrake API
 
 ## Description
 
-TrailBrake API is an API for creating and retrieving ride data for the TrailBrake mobile application.
+Trailbrake API is an API for creating and retrieving ride data for the Trailbrake mobile application.
 
 ## Usage
 

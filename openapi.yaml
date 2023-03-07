@@ -1,8 +1,8 @@
 openapi: 3.0.1
 info:
-  title: TrailBrake API
-  description: This is an API for TrailBrake to create new and load old ride data.
-  version: '0.1.0'
+  title: Trailbrake API
+  description: This is an API for Trailbrake to create new and load old ride data.
+  version: "0.1.0"
 servers:
   - url: https://driverapp-2022.de.r.appspot.com
 paths:
@@ -24,14 +24,14 @@ paths:
             type: integer
             minimum: 0
       responses:
-        '200':
+        "200":
           description: Retrieved metadata for all available rides
           content:
             application/json; charset=utf-8:
               schema:
                 type: array
-                items: 
-                  $ref: '#/components/schemas/rideMeta'
+                items:
+                  $ref: "#/components/schemas/rideRecord"
   /rides/{rideID}:
     parameters:
       - in: path
@@ -44,32 +44,58 @@ paths:
     get:
       description: Request data from <rideID>
       responses:
-        '200':
+        "200":
           description: Retrieved data from one ride
           content:
             application/json; charset=utf-8:
               schema:
-                $ref: '#/components/schemas/ride'
-      servers:
-        - url: https://driverapp-2022.de.r.appspot.com
+                $ref: "#/components/schemas/ride"
     post:
       description: Create new data from one ride
       responses:
-        '201':
+        "201":
           description: Created new data from one ride
     delete:
       description: Delete existing data of a ride
       responses:
-        '200':
+        "200":
           description: Deleted existing data of a ride
+  /profile/score:
+    parameters:
+      - in: query
+        name: useRecentRides
+        schema:
+          type: integer
+        required: false
+    get:
+      description: Get score for user based on `useRecentRides` (an integer) most recent rides
+      responses:
+        "200":
+          description: User score based on `useRecentRides` (an integer) most recent rides
+          content:
+            application/json; charset=utf-8:
+              schema:
+                $ref: "#/components/schemas/rideScore"
+  /profile/lifetime:
+    get:
+      description: Get lifetime statistics
+      responses:
+        200:
+          description: Retrieved lifetime statistics data
+          content:
+            application/json; charset=utf-8:
+              schema:
+                $ref: "#/components/schemas/lifetimeStats"
 components:
   schemas:
-    rideMeta:
+    rideRecord:
       type: object
-      required: 
+      required:
         - _id
         - rideName
         - rideDate
+        - rideScore
+        - rideMeta
       properties:
         _id:
           type: string
@@ -81,6 +107,48 @@ components:
           type: string
           format: date-time
           example: 2000-01-01T00:00:00.000+00:00
+        rideScore:
+          $ref: '#/components/schemas/rideScore'
+        rideMeta: 
+          type: object
+          required: 
+            - distance
+            - duration
+            - maxAcceleration
+          properties:
+            distance: 
+              type: number
+              example: 12.123
+            duration: 
+              type: number
+              example: 12.123
+            maxAcceleration: 
+              type: number
+              example: 12.123
+    rideScore:
+          type: object
+          required:
+            - overall
+            - speed
+            - acceleration
+            - braking
+            - cornering
+          properties:
+            overall:
+              type: number
+              example: 95
+            speed:
+              type: number
+              example: 95
+            acceleration:
+              type: number
+              example: 95
+            braking:
+              type: number
+              example: 95
+            cornering:
+              type: number
+              example: 95
     rideData:
       type: object
       required:
@@ -153,5 +221,29 @@ components:
           example: 2000-01-01T00:00:00.000+00:00
         rideData:
           allOf:
-            - $ref: '#/components/schemas/rideData'
+            - $ref: "#/components/schemas/rideData"
             - type: object
+    lifetimeStats:
+      type: object
+      required:
+        - ridesCount
+        - totalDistance
+        - totalDuration
+        - maxAcceleration
+      properties:
+        ridesCount:
+          type: integer
+          description: Total ride count
+          example: 12
+        totalDistance:
+          type: number
+          description: Total distance in meters
+          example: 12.123
+        totalDuration:
+          type: number
+          description: Total duration in seconds
+          example: 12.123
+        maxAcceleration:
+          type: number
+          description: Maximum acceleration in m/s^2
+          example: 1.123

@@ -12,50 +12,52 @@ const router = express.Router();
 router.get('/score', async (req, res) => {
     let limitCount = req.query.useRecentRides ? parseInt(req.query.useRecentRides) : 10;
 
-    let pipeline = [
-        { $sort: { 'createdAt': -1 } },
-        { $limit: limitCount },
+    let pipeline = [{ $sort: { 'createdAt': -1 } }];
+    if (limitCount !== 0) {
+        pipeline.push({ $limit: limitCount });
+    }
+    pipeline.push(
         {
             $group: {
                 _id: null,
                 '_totalDuration': { $sum: '$rideMeta.duration' },
                 '_sumProdOverallScore': {
                     $sum: {
-                        $multiply: [ '$rideScore.overall', '$rideMeta.duration' ]
+                        $multiply: ['$rideScore.overall', '$rideMeta.duration']
                     }
                 },
                 '_sumProdAccelerationScore': {
                     $sum: {
-                        $multiply: [ '$rideScore.acceleration', '$rideMeta.duration' ]
+                        $multiply: ['$rideScore.acceleration', '$rideMeta.duration']
                     }
                 },
                 '_sumProdBrakingScore': {
                     $sum: {
-                        $multiply: [ '$rideScore.braking', '$rideMeta.duration' ]
+                        $multiply: ['$rideScore.braking', '$rideMeta.duration']
                     }
                 },
                 '_sumProdCorneringScore': {
                     $sum: {
-                        $multiply: [ '$rideScore.cornering', '$rideMeta.duration' ]
+                        $multiply: ['$rideScore.cornering', '$rideMeta.duration']
                     }
                 },
                 '_sumProdSpeedScore': {
                     $sum: {
-                        $multiply: [ '$rideScore.speed', '$rideMeta.duration' ]
+                        $multiply: ['$rideScore.speed', '$rideMeta.duration']
                     }
                 },
             }
         },
         {
             $project: {
-                'overall': { $divide: [ '$_sumProdOverallScore', '$_totalDuration' ] },
-                'acceleration': { $divide: [ '$_sumProdAccelerationScore', '$_totalDuration' ] },
-                'braking': { $divide: [ '$_sumProdBrakingScore', '$_totalDuration' ] },
-                'cornering': { $divide: [ '$_sumProdCorneringScore', '$_totalDuration' ] },
-                'speed': { $divide: [ '$_sumProdSpeedScore', '$_totalDuration' ] }
+                'overall': { $divide: ['$_sumProdOverallScore', '$_totalDuration'] },
+                'acceleration': { $divide: ['$_sumProdAccelerationScore', '$_totalDuration'] },
+                'braking': { $divide: ['$_sumProdBrakingScore', '$_totalDuration'] },
+                'cornering': { $divide: ['$_sumProdCorneringScore', '$_totalDuration'] },
+                'speed': { $divide: ['$_sumProdSpeedScore', '$_totalDuration'] }
             }
         }
-    ];
+    );
 
     try {
         const scoreSummary = await RideRecord.aggregate(pipeline);
@@ -72,6 +74,7 @@ router.get('/lifetime', async (req, res) => {
         {
             $group: {
                 _id: null,
+                'ridesCount': { $count: {} },
                 'totalDistance': { $sum: '$rideMeta.distance' },
                 'totalDuration': { $sum: '$rideMeta.duration' },
                 'maxAcceleration': { $max: '$rideMeta.maxAcceleration' }
