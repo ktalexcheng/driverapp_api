@@ -23,21 +23,5 @@ require (
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.5.0 // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/text v0.3.8 // indirect
 )
-
-replace github.com/ktalexcheng/trailbrake_api/api/database => /Users/alexcheng/AppDev/trailbrake_api/api/database
-
-replace github.com/ktalexcheng/trailbrake_api/api/error => /Users/alexcheng/AppDev/trailbrake_api/api/error
-
-replace github.com/ktalexcheng/trailbrake_api/api/handler => /Users/alexcheng/AppDev/trailbrake_api/api/handler
-
-replace github.com/ktalexcheng/trailbrake_api/api/middleware => /Users/alexcheng/AppDev/trailbrake_api/api/middleware
-
-replace github.com/ktalexcheng/trailbrake_api/api/model => /Users/alexcheng/AppDev/trailbrake_api/api/model
-
-replace github.com/ktalexcheng/trailbrake_api/api/router => /Users/alexcheng/AppDev/trailbrake_api/api/router
-
-replace github.com/ktalexcheng/trailbrake_api/api/util => /Users/alexcheng/AppDev/trailbrake_api/api/util
-
-replace github.com/ktalexcheng/trailbrake_api/config/env => /Users/alexcheng/AppDev/trailbrake_api/config/env
