@@ -1,5 +1,1 @@
-.env
-node_modules
-*.rest
-.eslintrc.json
 certificate

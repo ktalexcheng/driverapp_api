@@ -1,7 +1,7 @@
 openapi: 3.0.1
 info:
   title: Trailbrake API
-  description: This is an API for Trailbrake to create new and load old ride data.
+  description: Backend service for Trailbrake app.
   version: "0.1.0"
 servers:
   - url: https://driverapp-2022.de.r.appspot.com
@@ -76,7 +76,7 @@ paths:
             application/json; charset=utf-8:
               schema:
                 $ref: "#/components/schemas/rideScore"
-  /profile/lifetime:
+  /profile/stats:
     get:
       description: Get lifetime statistics
       responses:
@@ -85,9 +85,29 @@ paths:
           content:
             application/json; charset=utf-8:
               schema:
-                $ref: "#/components/schemas/lifetimeStats"
+                $ref: "#/components/schemas/userStats"
 components:
   schemas:
+    rideMeta:
+      type: object
+      required:
+        - distance
+        - duration
+        - maxAcceleration
+        - UserId
+      properties:
+        distance: 
+          type: number
+          example: 12.123
+        duration: 
+          type: number
+          example: 12.123
+        maxAcceleration: 
+          type: number
+          example: 12.123
+        userId:
+          type: string
+          example: 635e2760b5219f17c17e7f74
     rideRecord:
       type: object
       required:
@@ -110,21 +130,7 @@ components:
         rideScore:
           $ref: '#/components/schemas/rideScore'
         rideMeta: 
-          type: object
-          required: 
-            - distance
-            - duration
-            - maxAcceleration
-          properties:
-            distance: 
-              type: number
-              example: 12.123
-            duration: 
-              type: number
-              example: 12.123
-            maxAcceleration: 
-              type: number
-              example: 12.123
+          $ref: '#/components/schemas/rideMeta'
     rideScore:
           type: object
           required:
@@ -154,7 +160,7 @@ components:
       required:
         - _id
         - timestamp
-        - metadata
+        - rideRecordId
         - locationLat
         - locationLong
         - accelerometerX
@@ -171,12 +177,9 @@ components:
           type: string
           format: date-time
           example: 2000-01-01T00:00:00.000+00:00
-        metadata:
-          type: object
-          properties:
-            rideRecordID:
-              type: string
-              example: 507f1f77bcf86cd799439011
+        rideRecordId:
+          type: string
+          example: 507f1f77bcf86cd799439011
         locationLat:
           type: number
           example: 12.123
@@ -211,7 +214,7 @@ components:
       properties:
         _id:
           type: string
-          example: 507f1f77bcf86cd799439011
+          example: 635e2760b5219f17c17e7f75
         rideName:
           type: string
           example: Sample Ride
@@ -223,7 +226,7 @@ components:
           allOf:
             - $ref: "#/components/schemas/rideData"
             - type: object
-    lifetimeStats:
+    userStats:
       type: object
       required:
         - ridesCount
@@ -239,11 +242,11 @@ components:
           type: number
           description: Total distance in meters
           example: 12.123
-        totalDuration:
+        totalRideTime:
           type: number
-          description: Total duration in seconds
+          description: Total accumulated ride time in seconds
           example: 12.123
         maxAcceleration:
           type: number
           description: Maximum acceleration in m/s^2
-          example: 1.123
+          example: 12.123
