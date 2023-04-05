@@ -9,6 +9,7 @@ import (
 // Struct for MongoDB rideRecords document mapping
 type RideRecord struct {
 	ID        primitive.ObjectID `bson:"_id" json:"_id"`
+	UserID    primitive.ObjectID `bson:"userId" json:"userId"`
 	RideName  string             `bson:"rideName" json:"rideName"`
 	RideDate  time.Time          `bson:"rideDate" json:"rideDate"`
 	RideMeta  RideMeta           `bson:"rideMeta,OmitEmpty" json:"rideMeta,omitempty"`
@@ -31,10 +32,9 @@ type RideDatum struct {
 
 // Struct for rideMeta field in rideRecords documents
 type RideMeta struct {
-	Distance        float64            `bson:"distance" json:"distance"`
-	Duration        float64            `bson:"duration" json:"duration"`
-	MaxAcceleration float64            `bson:"maxAcceleration" json:"maxAcceleration"`
-	UserID          primitive.ObjectID `bson:"userId" json:"userId"`
+	Distance        float64 `bson:"distance" json:"distance"`
+	Duration        float64 `bson:"duration" json:"duration"`
+	MaxAcceleration float64 `bson:"maxAcceleration" json:"maxAcceleration"`
 }
 
 // Struct for rideScore field in rideRecords documents

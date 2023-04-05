@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/ktalexcheng/trailbrake_api/api/middleware"
 	"github.com/ktalexcheng/trailbrake_api/api/model"
-	"github.com/ktalexcheng/trailbrake_api/config"
 	"github.com/ktalexcheng/trailbrake_api/util"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
@@ -23,7 +23,7 @@ import (
 func DeleteRideData(mg *util.MongoClient) http.HandlerFunc {
 	return middleware.ErrorHandler(
 		func(w http.ResponseWriter, r *http.Request) error {
-			log.Info().Msg("Delete ride data")
+			log.Info().Msg("Deleting ride data")
 
 			rideId := chi.URLParam(r, "rideId")
 
@@ -39,8 +39,10 @@ func DeleteRideData(mg *util.MongoClient) http.HandlerFunc {
 }
 
 func doDeleteRideData(mg *util.MongoClient, rideId string) error {
-	rideDataCol := mg.MongoDB.Collection("rideData")
-	rideRecordsCol := mg.MongoDB.Collection("rideRecords")
+	// rideDataCol := mg.MongoDB.Collection("rideData")
+	// rideRecordsCol := mg.MongoDB.Collection("rideRecords")
+	rideDataCol := mg.RideDataColl
+	rideRecordsCol := mg.RideRecordsColl
 
 	objId, err := primitive.ObjectIDFromHex(rideId)
 	if err != nil {
@@ -53,6 +55,9 @@ func doDeleteRideData(mg *util.MongoClient, rideId string) error {
 	rideRecFilter := bson.D{
 		{Key: "_id", Value: objId},
 	}
+
+	// TODO: Check userId matches before delete
+
 	_, err = rideDataCol.DeleteMany(context.TODO(), rideDataFilter)
 	if err != nil {
 		return err
@@ -77,8 +82,7 @@ func SaveRideData(mg *util.MongoClient) http.HandlerFunc {
 				return err
 			}
 
-			token := r.Context().Value(model.TokenKey).(model.Token)
-			rideRecord, err := doSaveRideData(mg, &token, &body)
+			rideRecord, err := doSaveRideData(r.Context(), mg, &body)
 			if err != nil {
 				return err
 			}
@@ -87,7 +91,10 @@ func SaveRideData(mg *util.MongoClient) http.HandlerFunc {
 			if err != nil {
 				return err
 			}
-			w.Write(rideRecordJson)
+			_, err = w.Write(rideRecordJson)
+			if err != nil {
+				return err
+			}
 
 			log.Info().Msg("Save ride data successful")
 			return nil
@@ -95,8 +102,7 @@ func SaveRideData(mg *util.MongoClient) http.HandlerFunc {
 	)
 }
 
-func doSaveRideData(mg *util.MongoClient, token *model.Token, body *map[string]interface{}) (*model.RideRecord, error) {
-
+func doSaveRideData(ctx context.Context, mg *util.MongoClient, body *map[string]interface{}) (*model.RideRecord, error) {
 	newRideRecordID := primitive.NewObjectID()
 	tsStr := (*body)["rideDate"].(string)
 	timestamp, err := time.Parse(time.RFC3339, tsStr)
@@ -132,12 +138,12 @@ func doSaveRideData(mg *util.MongoClient, token *model.Token, body *map[string]i
 		return nil, err
 	}
 
+	token := ctx.Value(model.TokenKey).(model.Token)
 	userId, err := primitive.ObjectIDFromHex(token.Subject)
 	if err != nil {
 		return nil, err
 	}
 	rideMeta := (*judgeScore).RideMeta
-	rideMeta.UserID = userId
 
 	newRideRecord := model.RideRecord{
 		ID:        newRideRecordID,
@@ -145,10 +151,13 @@ func doSaveRideData(mg *util.MongoClient, token *model.Token, body *map[string]i
 		RideDate:  timestamp,
 		RideScore: (*judgeScore).RideScore,
 		RideMeta:  rideMeta,
+		UserID:    userId,
 	}
 
-	rideRecordsCol := mg.MongoDB.Collection("rideRecords")
-	rideDataCol := mg.MongoDB.Collection("rideData")
+	// rideRecordsCol := mg.MongoDB.Collection("rideRecords")
+	// rideDataCol := mg.MongoDB.Collection("rideData")
+	rideRecordsCol := mg.RideRecordsColl
+	rideDataCol := mg.RideDataColl
 
 	_, err = rideRecordsCol.InsertOne(context.TODO(), newRideRecord)
 	if err != nil {
@@ -163,7 +172,7 @@ func doSaveRideData(mg *util.MongoClient, token *model.Token, body *map[string]i
 }
 
 func doJudgeRideScore(rideData *[]interface{}) (*model.JudgeResult, error) {
-	judgeApiScore := fmt.Sprintf("%s/rideScore", config.JudgeAPI)
+	judgeApiScore := fmt.Sprintf("%s/rideScore", os.Getenv("JUDGE_URL"))
 	postBody, _ := json.Marshal(map[string]*[]interface{}{
 		"rideData": rideData,
 	})
@@ -211,7 +220,10 @@ func GetRideData(mg *util.MongoClient) http.HandlerFunc {
 				return err
 			}
 
-			w.Write(response)
+			_, err = w.Write(response)
+			if err != nil {
+				return err
+			}
 
 			log.Info().Msg("Get ride data successful")
 			return nil
@@ -222,8 +234,10 @@ func GetRideData(mg *util.MongoClient) http.HandlerFunc {
 func doGetRideData(mg *util.MongoClient, rideId string) (*model.Ride, error) {
 	objId, err := primitive.ObjectIDFromHex(rideId)
 
-	rideRecordsCol := mg.MongoDB.Collection("rideRecords")
-	rideDataCol := mg.MongoDB.Collection("rideData")
+	// rideRecordsCol := mg.MongoDB.Collection("rideRecords")
+	// rideDataCol := mg.MongoDB.Collection("rideData")
+	rideRecordsCol := mg.RideRecordsColl
+	rideDataCol := mg.RideDataColl
 
 	// Fetch ride record
 	if err != nil {
@@ -232,6 +246,8 @@ func doGetRideData(mg *util.MongoClient, rideId string) (*model.Ride, error) {
 	rideRecFilter := bson.D{
 		{Key: "_id", Value: objId},
 	}
+
+	// TODO: Check userId matches before get
 
 	var rideRec model.RideRecord
 	err = rideRecordsCol.FindOne(context.TODO(), rideRecFilter).Decode(&rideRec)
@@ -271,7 +287,7 @@ func GetAllRideRecords(mg *util.MongoClient) http.HandlerFunc {
 		func(w http.ResponseWriter, r *http.Request) error {
 			log.Info().Msg("Getting ride records only")
 
-			docs, err := doGetAllRideRecords(mg)
+			docs, err := doGetAllRideRecords(r.Context(), mg)
 			if err != nil {
 				return err
 			}
@@ -281,7 +297,10 @@ func GetAllRideRecords(mg *util.MongoClient) http.HandlerFunc {
 				return err
 			}
 
-			w.Write(response)
+			_, err = w.Write(response)
+			if err != nil {
+				return err
+			}
 
 			log.Info().Msg("Get ride records only successful")
 			return nil
@@ -289,9 +308,35 @@ func GetAllRideRecords(mg *util.MongoClient) http.HandlerFunc {
 	)
 }
 
-func doGetAllRideRecords(mg *util.MongoClient) (*[]model.RideRecord, error) {
-	rideRecordsCol := mg.MongoDB.Collection("rideRecords")
-	cursor, err := rideRecordsCol.Find(context.TODO(), bson.D{})
+func doGetAllRideRecords(ctx context.Context, mg *util.MongoClient) (*[]model.RideRecord, error) {
+	// rideRecordsCol := mg.MongoDB.Collection("rideRecords")
+	rideRecordsCol := mg.RideRecordsColl
+
+	token := ctx.Value(model.TokenKey).(model.Token)
+	userId, err := primitive.ObjectIDFromHex(token.Subject)
+	if err != nil {
+		return nil, err
+	}
+
+	// pipeline := make([]bson.M, 0)
+	// pipeline = append(pipeline, []bson.M{
+	// 	{
+	// 		"$match": bson.M{
+	// 			"userId": userId,
+	// 		},
+	// 	},
+	// }...)
+
+	// cursor, err := rideRecordsCol.Aggregate(context.TODO(), pipeline)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// Fetch ride data for the user only
+	rideRecordsFilter := bson.M{
+		"userId": userId,
+	}
+	cursor, err := rideRecordsCol.Find(context.TODO(), rideRecordsFilter)
 	if err != nil {
 		return nil, err
 	}

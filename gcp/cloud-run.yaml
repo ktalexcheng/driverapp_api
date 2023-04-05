@@ -1,0 +1,52 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: trailbrake-api
+spec:
+  template:
+    spec:
+      containers:
+      - image: asia-east1-docker.pkg.dev/driverapp-2022/trailbrake-api/trailbrake-api:latest
+        ports:
+        - name: http1
+          containerPort: 80
+        volumeMounts:
+        - mountPath: /var/secrets/mongodb-cert
+          name: secrets-mongodb-cert
+        - mountPath: /var/secrets/token-secret-key
+          name: secrets-token-secret-key
+        env:
+        # - name: MONGO_DB_CERT
+        #   valueFrom: 
+        #     secretKeyRef: 
+        #       key: latest
+        #       name: mongodb-cert
+        # - name: TOKEN_SECRET_KEY
+        #   valueFrom: 
+        #     secretKeyRef: 
+        #       key: latest
+        #       name: token-secret-key
+        - name: MONGO_DB_CERT
+          value: /var/secrets/mongodb-cert
+        - name: TOKEN_SECRET_KEY
+          value: /var/secrets/token-secret-key
+        - name: MONGO_DB_CONN
+          value: /var/secrets/mongodb-conn
+        - name: MONGO_DB_NAME
+          value: /var/secrets/mongodb-name
+        - name: JUDGE_URL
+          value: https://trailbrake-judge-f6muv3fwlq-de.a.run.app
+      volumes:
+      - name: secrets-mongodb-cert
+        secret:
+          items:
+          - key : latest
+            path: .
+          secretName: mongodb-cert
+      - name: secrets-token-secret-key
+        secret:
+          items:
+          - key : latest
+            path: .
+          secretName: token-secret-key
+

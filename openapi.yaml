@@ -4,7 +4,7 @@ info:
   description: Backend service for Trailbrake app.
   version: "0.1.0"
 servers:
-  - url: https://driverapp-2022.de.r.appspot.com
+  - url: https://trailbrake-api-f6muv3fwlq-de.a.run.app
 paths:
   /rides:
     get:

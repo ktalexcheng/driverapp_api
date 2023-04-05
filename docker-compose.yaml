@@ -1,0 +1,32 @@
+version: '3'
+
+services:
+  trailbrake-api:
+    build: .
+    image: trailbrake-api:latest
+    ports:
+      # Service will be accessible on the host at port 9090.
+      - "9090:${PORT:-8080}"
+    environment:
+      # ${PORT:-8080} is bash syntax, default to 8080 if undefined
+      PORT: ${PORT:-8080}
+      MONGO_DB_CERT: /run/secrets/mongoDbCert
+      TOKEN_SECRET_KEY: /run/secrets/tokenSecretKey
+      MONGO_DB_CONN: /run/secrets/mongoDbConn
+      MONGO_DB_NAME: /run/secrets/mongoDbName
+      JUDGE_URL: https://trailbrake-judge-f6muv3fwlq-de.a.run.app
+    secrets:
+      - mongoDbCert
+      - mongoDbConn
+      - mongoDbName
+      - tokenSecretKey
+
+secrets:
+  mongoDbCert:
+    file: /Users/alexcheng/AppDev/trailbrake_api/secrets/atlas-admin-X509-cert.pem
+  mongoDbConn:
+    file: /Users/alexcheng/AppDev/trailbrake_api/secrets/mongodb_conn
+  mongoDbName:
+    file: /Users/alexcheng/AppDev/trailbrake_api/secrets/mongodb_name
+  tokenSecretKey:
+    file: /Users/alexcheng/AppDev/trailbrake_api/secrets/token_key

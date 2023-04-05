@@ -19,8 +19,6 @@ import (
 func GetUserScore(mg *util.MongoClient) http.HandlerFunc {
 	return middleware.ErrorHandler(
 		func(w http.ResponseWriter, r *http.Request) error {
-			token := r.Context().Value(model.TokenKey).(model.Token)
-			user := token.User
 			param := chi.URLParam(r, "useRecentRides")
 
 			var useRecentRides int
@@ -38,23 +36,43 @@ func GetUserScore(mg *util.MongoClient) http.HandlerFunc {
 				useRecentRides = 10
 			}
 
-			userScore, err := doGetUserScore(mg, &user, useRecentRides)
+			userScore, err := doGetUserScore(r.Context(), mg, useRecentRides)
 			if err != nil {
 				return err
+			}
+
+			if userScore == nil {
+				err = util.HTTPWriteJSONResponse(w, http.StatusNotFound, &util.JSONResponse{
+					Message: "no rides found for user",
+				})
+				if err != nil {
+					return err
+				}
+				return nil
 			}
 
 			userScoreJson, err := json.Marshal(userScore)
 			if err != nil {
 				return err
 			}
-			w.Write(userScoreJson)
+
+			_, err = w.Write(userScoreJson)
+			if err != nil {
+				return err
+			}
 
 			return nil
 		},
 	)
 }
 
-func doGetUserScore(mg *util.MongoClient, user *model.User, useRecentRides int) (*model.RideScore, error) {
+func doGetUserScore(ctx context.Context, mg *util.MongoClient, useRecentRides int) (*model.RideScore, error) {
+	token := ctx.Value(model.TokenKey).(model.Token)
+	userId, err := primitive.ObjectIDFromHex(token.Subject)
+	if err != nil {
+		return nil, err
+	}
+
 	pipeline := make([]bson.M, 0)
 
 	if useRecentRides > 0 {
@@ -64,6 +82,11 @@ func doGetUserScore(mg *util.MongoClient, user *model.User, useRecentRides int) 
 	}
 
 	pipeline = append(pipeline, []bson.M{
+		{
+			"$match": bson.M{
+				"userId": userId,
+			},
+		},
 		{
 			"$sort": bson.M{
 				"rideDate": -1,
@@ -136,7 +159,8 @@ func doGetUserScore(mg *util.MongoClient, user *model.User, useRecentRides int) 
 		},
 	}...)
 
-	rideRecordsCol := mg.MongoDB.Collection("rideRecords")
+	// rideRecordsCol := mg.MongoDB.Collection("rideRecords")
+	rideRecordsCol := mg.RideRecordsColl
 	cur, err := rideRecordsCol.Aggregate(context.TODO(), pipeline)
 	if err != nil {
 		return nil, err
@@ -148,45 +172,73 @@ func doGetUserScore(mg *util.MongoClient, user *model.User, useRecentRides int) 
 		return nil, err
 	}
 
+	if len(userScore) == 0 {
+		return nil, nil
+	}
+
 	return &userScore[0], nil
 }
 
 func GetUserStats(mg *util.MongoClient) http.HandlerFunc {
 	return middleware.ErrorHandler(
 		func(w http.ResponseWriter, r *http.Request) error {
-			token := r.Context().Value(model.TokenKey).(model.Token)
-			user := token.User
-
-			userStats, err := doGetUserStats(mg, &user)
+			userStats, err := doGetUserStats(r.Context(), mg)
 			if err != nil {
 				return err
+			}
+
+			if userStats == nil {
+				err = util.HTTPWriteJSONResponse(w, http.StatusNotFound, &util.JSONResponse{
+					Message: "no rides found for user",
+				})
+				if err != nil {
+					return err
+				}
+				return nil
 			}
 
 			userStatsJson, err := json.Marshal(userStats)
 			if err != nil {
 				return err
 			}
-			w.Write(userStatsJson)
+
+			_, err = w.Write(userStatsJson)
+			if err != nil {
+				return err
+			}
 
 			return nil
 		},
 	)
 }
 
-func doGetUserStats(mg *util.MongoClient, user *model.User) (*model.UserStats, error) {
+func doGetUserStats(ctx context.Context, mg *util.MongoClient) (*model.UserStats, error) {
+	token := ctx.Value(model.TokenKey).(model.Token)
+	userId, err := primitive.ObjectIDFromHex(token.Subject)
+	if err != nil {
+		return nil, err
+	}
+
 	pipeline := make([]bson.M, 0)
 
-	pipeline = append(pipeline, bson.M{
-		"$group": bson.M{
+	pipeline = append(pipeline, []bson.M{
+		{
+			"$match": bson.M{
+				"userId": userId,
+			},
+		},
+		{"$group": bson.M{
 			"_id":             nil,
 			"ridesCount":      bson.M{"$count": bson.M{}},
 			"totalDistance":   bson.M{"$sum": "$rideMeta.distance"},
 			"totalRideTime":   bson.M{"$sum": "$rideMeta.duration"},
 			"maxAcceleration": bson.M{"$max": "$rideMeta.maxAcceleration"},
 		},
-	})
+		},
+	}...)
 
-	rideRecordsCol := mg.MongoDB.Collection("rideRecords")
+	// rideRecordsCol := mg.MongoDB.Collection("rideRecords")
+	rideRecordsCol := mg.RideRecordsColl
 	cur, err := rideRecordsCol.Aggregate(context.TODO(), pipeline)
 	if err != nil {
 		return nil, err
@@ -196,6 +248,10 @@ func doGetUserStats(mg *util.MongoClient, user *model.User) (*model.UserStats, e
 	err = cur.All(context.TODO(), &userStats)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(userStats) == 0 {
+		return nil, nil
 	}
 
 	return &userStats[0], nil
@@ -213,9 +269,12 @@ func CreateNewUser(mg *util.MongoClient) http.HandlerFunc {
 			}
 
 			if user.Email == "" || user.Password == "" {
-				util.HTTPWriteJSONResponse(w, http.StatusBadRequest, &util.JSONResponse{
+				err = util.HTTPWriteJSONResponse(w, http.StatusBadRequest, &util.JSONResponse{
 					Message: "'email' and 'password' must not be blank.",
 				})
+				if err != nil {
+					return err
+				}
 			}
 
 			token, err := doCreateNewUser(mg, &user)
@@ -225,17 +284,22 @@ func CreateNewUser(mg *util.MongoClient) http.HandlerFunc {
 
 			// Return the token in the response
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]string{
+			err = json.NewEncoder(w).Encode(map[string]string{
 				"token": token.TokenString,
 			})
+			if err != nil {
+				return err
+			}
 
+			log.Info().Msg("Create new user successful")
 			return nil
 		},
 	)
 }
 
 func doCreateNewUser(mg *util.MongoClient, user *model.User) (*model.Token, error) {
-	usersCol := mg.MongoDB.Collection("users")
+	// usersCol := mg.MongoDB.Collection("users")
+	usersCol := mg.UsersColl
 
 	count, err := usersCol.CountDocuments(context.TODO(), bson.D{{Key: "email", Value: (*user).Email}})
 	if err != nil {
@@ -253,7 +317,10 @@ func doCreateNewUser(mg *util.MongoClient, user *model.User) (*model.Token, erro
 	}
 
 	var token model.Token
-	token.CreateToken(user)
+	err = token.CreateToken(user)
+	if err != nil {
+		return nil, err
+	}
 
 	return &token, nil
 }
@@ -262,9 +329,12 @@ func GetToken(mg *util.MongoClient) http.HandlerFunc {
 	return middleware.ErrorHandler(
 		func(w http.ResponseWriter, r *http.Request) error {
 			if r.ContentLength == 0 {
-				util.HTTPWriteJSONResponse(w, http.StatusUnauthorized, &util.JSONResponse{
+				err := util.HTTPWriteJSONResponse(w, http.StatusUnauthorized, &util.JSONResponse{
 					Message: "missing credentials",
 				})
+				if err != nil {
+					return err
+				}
 
 				return nil
 			}
@@ -281,9 +351,12 @@ func GetToken(mg *util.MongoClient) http.HandlerFunc {
 			}
 			// Invalid credentials
 			if token == nil {
-				util.HTTPWriteJSONResponse(w, http.StatusUnauthorized, &util.JSONResponse{
+				err = util.HTTPWriteJSONResponse(w, http.StatusUnauthorized, &util.JSONResponse{
 					Message: "invalid credentials",
 				})
+				if err != nil {
+					return err
+				}
 
 				return nil
 			}
@@ -296,7 +369,10 @@ func GetToken(mg *util.MongoClient) http.HandlerFunc {
 			}
 
 			w.WriteHeader(http.StatusOK)
-			w.Write(response)
+			_, err = w.Write(response)
+			if err != nil {
+				return err
+			}
 
 			return nil
 		},
@@ -317,7 +393,11 @@ func doGetToken(mg *util.MongoClient, user *model.User) (*model.Token, error) {
 
 		if userValid {
 			var token model.Token
-			token.CreateToken(user)
+
+			err = token.CreateToken(user)
+			if err != nil {
+				return nil, err
+			}
 
 			return &token, nil
 		}

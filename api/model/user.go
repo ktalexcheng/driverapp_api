@@ -24,7 +24,8 @@ type UserStats struct {
 }
 
 func (u *User) CheckUserExists(mg *util.MongoClient) (bool, error) {
-	usersCol := mg.MongoDB.Collection("users")
+	// usersCol := mg.MongoDB.Collection("users")
+	usersCol := mg.UsersColl
 	filter := bson.M{
 		"$or": []bson.M{
 			{"_id": u.ID},
@@ -45,7 +46,8 @@ func (u *User) CheckUserExists(mg *util.MongoClient) (bool, error) {
 }
 
 func (u *User) ValidateUserPass(mg *util.MongoClient) (bool, error) {
-	usersCol := mg.MongoDB.Collection("users")
+	// usersCol := mg.MongoDB.Collection("users")
+	usersCol := mg.UsersColl
 
 	var userCred User
 	err := usersCol.FindOne(context.TODO(), bson.D{{Key: "email", Value: u.Email}}).Decode(&userCred)

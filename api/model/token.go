@@ -23,7 +23,7 @@ type TokenKeyType string
 
 const TokenKey TokenKeyType = "token"
 
-var secretKey = os.Getenv("AUTH_SECRET_KEY")
+var secretKey = os.Getenv("TOKEN_SECRET_KEY")
 
 func (t *Token) VerifyToken(mg *util.MongoClient) error {
 	token, err := jwt.Parse(t.TokenString, func(token *jwt.Token) (interface{}, error) {

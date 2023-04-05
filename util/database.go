@@ -13,9 +13,13 @@ import (
 
 // Struct for MongoDB client
 type MongoClient struct {
-	MongoDB  *mongo.Database
-	MongoURI string
-	Database string
+	// Client   *mongo.Client
+	MongoDB         *mongo.Database
+	MongoURI        string
+	Database        string
+	RideDataColl    *mongo.Collection
+	RideRecordsColl *mongo.Collection
+	UsersColl       *mongo.Collection
 }
 
 // Initializes a new MongoDB connection client
@@ -51,9 +55,13 @@ func NewMongoClient(connStr string, dbName string, certPath string) (*MongoClien
 	log.Info().Msg("Succesfully connected to and pinged MongoDB")
 
 	mongoClient := MongoClient{
-		MongoDB:  client.Database(dbName),
-		MongoURI: connStr,
-		Database: dbName,
+		// Client:   client,
+		MongoDB:         client.Database(dbName),
+		MongoURI:        connStr,
+		Database:        dbName,
+		RideDataColl:    client.Database(dbName).Collection("rideData"),
+		RideRecordsColl: client.Database(dbName).Collection("rideRecords"),
+		UsersColl:       client.Database(dbName).Collection("users"),
 	}
 
 	return &mongoClient, nil
