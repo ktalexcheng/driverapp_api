@@ -11,13 +11,17 @@ type JSONResponse struct {
 }
 
 // Utility to write status code to response header and JSONResponse to body
-func HTTPWriteJSONResponse(w http.ResponseWriter, status int, respBody *JSONResponse) error {
+func HTTPWriteJSONBody(w http.ResponseWriter, status int, respBody interface{}) error {
 	response, err := json.Marshal(respBody)
 	if err != nil {
 		return err
 	}
 
 	w.WriteHeader(status)
-	w.Write(response)
+	_, err = w.Write(response)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

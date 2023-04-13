@@ -21,8 +21,10 @@ func AuthHandler(mg *util.MongoClient) func(next http.Handler) http.Handler {
 				// Get the authorization header value
 				authHeader := r.Header.Get("Authorization")
 				if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-					w.WriteHeader(http.StatusUnauthorized)
-					w.Write([]byte("Missing authorization token"))
+					err := util.HTTPWriteJSONBody(w, http.StatusUnauthorized, util.JSONResponse{Message: "Missing authorization token"})
+					if err != nil {
+						return err
+					}
 					log.Debug().Msg(fmt.Sprintf("Authentication failed for %s %s", r.Method, r.URL))
 					return nil
 				}

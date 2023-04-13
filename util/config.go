@@ -6,9 +6,9 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func setEnvIfMissing(envVarName string, val string) {
-	if os.Getenv(envVarName) == "" {
-		os.Setenv(envVarName, val)
+func SetEnvIfMissing(envName string, value string) {
+	if os.Getenv(envName) == "" {
+		os.Setenv(envName, value)
 	}
 }
 
@@ -25,6 +25,6 @@ func SetupDefaultEnv(debug bool) {
 	defaultEnv := map[string]string{}
 
 	for k, v := range defaultEnv {
-		setEnvIfMissing(k, v)
+		SetEnvIfMissing(k, v)
 	}
 }

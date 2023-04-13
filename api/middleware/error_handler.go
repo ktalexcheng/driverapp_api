@@ -33,8 +33,8 @@ func ErrorHandler(h Handler) http.HandlerFunc {
 			}
 
 			// Write response
+			w.WriteHeader(http.StatusInternalServerError) // Call WriteHeader() first to prevent superfluous call
 			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusInternalServerError)
 			_, _err = w.Write(jsonResponse)
 			if _err != nil {
 				logErr(err)

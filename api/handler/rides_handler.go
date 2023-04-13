@@ -32,6 +32,11 @@ func DeleteRideData(mg *util.MongoClient) http.HandlerFunc {
 				return err
 			}
 
+			err = util.HTTPWriteJSONBody(w, http.StatusNoContent, nil)
+			if err != nil {
+				return err
+			}
+
 			log.Info().Msg("Delete ride data successful")
 			return nil
 		},
@@ -39,11 +44,6 @@ func DeleteRideData(mg *util.MongoClient) http.HandlerFunc {
 }
 
 func doDeleteRideData(mg *util.MongoClient, rideId string) error {
-	// rideDataCol := mg.MongoDB.Collection("rideData")
-	// rideRecordsCol := mg.MongoDB.Collection("rideRecords")
-	rideDataCol := mg.RideDataColl
-	rideRecordsCol := mg.RideRecordsColl
-
 	objId, err := primitive.ObjectIDFromHex(rideId)
 	if err != nil {
 		return err
@@ -58,12 +58,12 @@ func doDeleteRideData(mg *util.MongoClient, rideId string) error {
 
 	// TODO: Check userId matches before delete
 
-	_, err = rideDataCol.DeleteMany(context.TODO(), rideDataFilter)
+	_, err = mg.RideDataColl.DeleteMany(context.TODO(), rideDataFilter)
 	if err != nil {
 		return err
 	}
 
-	_, err = rideRecordsCol.DeleteOne(context.TODO(), rideRecFilter)
+	_, err = mg.RideRecordsColl.DeleteOne(context.TODO(), rideRecFilter)
 	if err != nil {
 		return err
 	}
@@ -87,11 +87,7 @@ func SaveRideData(mg *util.MongoClient) http.HandlerFunc {
 				return err
 			}
 
-			rideRecordJson, err := json.Marshal(rideRecord)
-			if err != nil {
-				return err
-			}
-			_, err = w.Write(rideRecordJson)
+			err = util.HTTPWriteJSONBody(w, http.StatusCreated, rideRecord)
 			if err != nil {
 				return err
 			}
@@ -154,16 +150,11 @@ func doSaveRideData(ctx context.Context, mg *util.MongoClient, body *map[string]
 		UserID:    userId,
 	}
 
-	// rideRecordsCol := mg.MongoDB.Collection("rideRecords")
-	// rideDataCol := mg.MongoDB.Collection("rideData")
-	rideRecordsCol := mg.RideRecordsColl
-	rideDataCol := mg.RideDataColl
-
-	_, err = rideRecordsCol.InsertOne(context.TODO(), newRideRecord)
+	_, err = mg.RideRecordsColl.InsertOne(context.TODO(), newRideRecord)
 	if err != nil {
 		return nil, err
 	}
-	_, err = rideDataCol.InsertMany(context.TODO(), rideData)
+	_, err = mg.RideDataColl.InsertMany(context.TODO(), rideData)
 	if err != nil {
 		return nil, err
 	}
@@ -215,12 +206,7 @@ func GetRideData(mg *util.MongoClient) http.HandlerFunc {
 				return err
 			}
 
-			response, err := json.Marshal(docs)
-			if err != nil {
-				return err
-			}
-
-			_, err = w.Write(response)
+			err = util.HTTPWriteJSONBody(w, http.StatusOK, docs)
 			if err != nil {
 				return err
 			}
@@ -234,11 +220,6 @@ func GetRideData(mg *util.MongoClient) http.HandlerFunc {
 func doGetRideData(mg *util.MongoClient, rideId string) (*model.Ride, error) {
 	objId, err := primitive.ObjectIDFromHex(rideId)
 
-	// rideRecordsCol := mg.MongoDB.Collection("rideRecords")
-	// rideDataCol := mg.MongoDB.Collection("rideData")
-	rideRecordsCol := mg.RideRecordsColl
-	rideDataCol := mg.RideDataColl
-
 	// Fetch ride record
 	if err != nil {
 		return nil, err
@@ -250,7 +231,7 @@ func doGetRideData(mg *util.MongoClient, rideId string) (*model.Ride, error) {
 	// TODO: Check userId matches before get
 
 	var rideRec model.RideRecord
-	err = rideRecordsCol.FindOne(context.TODO(), rideRecFilter).Decode(&rideRec)
+	err = mg.RideRecordsColl.FindOne(context.TODO(), rideRecFilter).Decode(&rideRec)
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +240,7 @@ func doGetRideData(mg *util.MongoClient, rideId string) (*model.Ride, error) {
 	rideDataFilter := bson.D{
 		{Key: "metadata.rideRecordID", Value: objId},
 	}
-	rideDataCur, err := rideDataCol.Find(context.TODO(), rideDataFilter)
+	rideDataCur, err := mg.RideDataColl.Find(context.TODO(), rideDataFilter)
 	if err != nil {
 		return nil, err
 	}
@@ -292,12 +273,7 @@ func GetAllRideRecords(mg *util.MongoClient) http.HandlerFunc {
 				return err
 			}
 
-			response, err := json.Marshal(docs)
-			if err != nil {
-				return err
-			}
-
-			_, err = w.Write(response)
+			err = util.HTTPWriteJSONBody(w, http.StatusOK, docs)
 			if err != nil {
 				return err
 			}
@@ -309,9 +285,6 @@ func GetAllRideRecords(mg *util.MongoClient) http.HandlerFunc {
 }
 
 func doGetAllRideRecords(ctx context.Context, mg *util.MongoClient) (*[]model.RideRecord, error) {
-	// rideRecordsCol := mg.MongoDB.Collection("rideRecords")
-	rideRecordsCol := mg.RideRecordsColl
-
 	token := ctx.Value(model.TokenKey).(model.Token)
 	userId, err := primitive.ObjectIDFromHex(token.Subject)
 	if err != nil {
@@ -336,7 +309,7 @@ func doGetAllRideRecords(ctx context.Context, mg *util.MongoClient) (*[]model.Ri
 	rideRecordsFilter := bson.M{
 		"userId": userId,
 	}
-	cursor, err := rideRecordsCol.Find(context.TODO(), rideRecordsFilter)
+	cursor, err := mg.RideRecordsColl.Find(context.TODO(), rideRecordsFilter)
 	if err != nil {
 		return nil, err
 	}

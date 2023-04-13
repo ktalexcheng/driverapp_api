@@ -17,6 +17,7 @@ func Router(mg *util.MongoClient) *chi.Mux {
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/token", handler.GetToken(mg))
 		r.Post("/signup", handler.CreateNewUser(mg))
+		r.With(middleware.AuthHandler(mg)).Head("/token", handler.ValidateToken())
 	})
 
 	r.Route("/rides", func(r chi.Router) {
