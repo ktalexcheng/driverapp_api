@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/ktalexcheng/trailbrake_api/api/middleware"
 	"github.com/ktalexcheng/trailbrake_api/api/router"
 	"github.com/ktalexcheng/trailbrake_api/util"
 	"github.com/pkg/errors"
@@ -33,7 +34,7 @@ func main() {
 
 	// Get router and start service
 	var port = os.Getenv("PORT")
-	r := router.Router(mongoClient)
+	r := router.Router(mongoClient, middleware.AuthHandler(mongoClient))
 	log.Info().Msg("Starting Trailbrake API service")
 	err = http.ListenAndServe(":"+port, r)
 	if err != nil {

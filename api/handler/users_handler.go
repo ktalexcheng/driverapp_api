@@ -41,15 +41,15 @@ func GetUserScore(mg *util.MongoClient) http.HandlerFunc {
 				return err
 			}
 
-			if userScore == nil {
-				err = util.HTTPWriteJSONBody(w, http.StatusNotFound, &util.JSONResponse{
-					Message: "no rides found for user",
-				})
-				if err != nil {
-					return err
-				}
-				return nil
-			}
+			// if userScore == nil {
+			// 	err = util.HTTPWriteJSONBody(w, http.StatusNotFound, &util.JSONResponse{
+			// 		Message: "no rides found for user",
+			// 	})
+			// 	if err != nil {
+			// 		return err
+			// 	}
+			// 	return nil
+			// }
 
 			// userScoreJson, err := json.Marshal(userScore)
 			// if err != nil {
@@ -172,7 +172,7 @@ func doGetUserScore(ctx context.Context, mg *util.MongoClient, useRecentRides in
 	}
 
 	if len(userScore) == 0 {
-		return nil, nil
+		return &model.RideScore{}, nil
 	}
 
 	return &userScore[0], nil
@@ -186,15 +186,15 @@ func GetUserStats(mg *util.MongoClient) http.HandlerFunc {
 				return err
 			}
 
-			if userStats == nil {
-				err = util.HTTPWriteJSONBody(w, http.StatusNotFound, &util.JSONResponse{
-					Message: "no rides found for user",
-				})
-				if err != nil {
-					return err
-				}
-				return nil
-			}
+			// if userStats == nil {
+			// 	err = util.HTTPWriteJSONBody(w, http.StatusNotFound, &util.JSONResponse{
+			// 		Message: "no rides found for user",
+			// 	})
+			// 	if err != nil {
+			// 		return err
+			// 	}
+			// 	return nil
+			// }
 
 			// userStatsJson, err := json.Marshal(userStats)
 			// if err != nil {
@@ -249,7 +249,7 @@ func doGetUserStats(ctx context.Context, mg *util.MongoClient) (*model.UserStats
 	}
 
 	if len(userStats) == 0 {
-		return nil, nil
+		return &model.UserStats{}, nil
 	}
 
 	return &userStats[0], nil

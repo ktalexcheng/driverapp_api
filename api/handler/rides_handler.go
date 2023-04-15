@@ -238,7 +238,7 @@ func doGetRideData(mg *util.MongoClient, rideId string) (*model.Ride, error) {
 
 	// Fetch ride data
 	rideDataFilter := bson.D{
-		{Key: "metadata.rideRecordID", Value: objId},
+		{Key: "rideRecordId", Value: objId},
 	}
 	rideDataCur, err := mg.RideDataColl.Find(context.TODO(), rideDataFilter)
 	if err != nil {

@@ -92,7 +92,11 @@ func (t *Token) CreateToken(user *User) error {
 	if err != nil {
 		return err
 	}
+
+	t.Token = token
 	t.TokenString = tokenString
+	t.Subject = (*user).ID.Hex()
+	t.User = *user
 
 	return nil
 }

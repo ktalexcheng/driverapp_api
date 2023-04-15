@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ktalexcheng/trailbrake_api/api/middleware"
 	"github.com/ktalexcheng/trailbrake_api/api/model"
 	"github.com/ktalexcheng/trailbrake_api/util"
 	"github.com/stretchr/testify/assert"
@@ -18,6 +19,8 @@ import (
 )
 
 var apiServer *httptest.Server
+var testUser *model.User
+var authHeader map[string]string
 
 func sendRequestToMockServer(t *testing.T, mg *util.MongoClient, method string, endpoint string, body io.Reader, headers interface{}) *httptest.ResponseRecorder {
 	fmt.Println(apiServer.URL)
@@ -41,7 +44,16 @@ func sendRequestToMockServer(t *testing.T, mg *util.MongoClient, method string, 
 	return rr
 }
 
-func initEnv() {
+func unmarshalJSON(rr *httptest.ResponseRecorder, target any) error {
+	err := json.NewDecoder(rr.Body).Decode(target)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func initTestEnv() {
 	testEnvs := map[string]string{
 		"MONGO_DB_NAME":    "driverAppDB",
 		"TOKEN_SECRET_KEY": "ead1a39f200400e43f7f3da657b42f8a2243d67be6343ac4209b05636b9ad426",
@@ -52,29 +64,16 @@ func initEnv() {
 	}
 }
 
-func createUser(mg *util.MongoClient) (*model.User, error) {
-	testUserId := primitive.NewObjectID()
-	testUser := model.User{
-		ID:        testUserId,
-		UserAlias: testUserId.Hex()[:8],
-		Email:     "test@domain.com",
-		Password:  "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
-	}
-
-	_, err := mg.UsersColl.InsertOne(context.TODO(), testUser)
+func createTestUser(mg *util.MongoClient, user *model.User) error {
+	_, err := mg.UsersColl.InsertOne(context.TODO(), user)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &testUser, nil
+	return nil
 }
 
-func createRide(mg *util.MongoClient) (*model.Ride, error) {
-	testUser, err := createUser(mg)
-	if err != nil {
-		return nil, err
-	}
-
+func createTestRide(mg *util.MongoClient, user *model.User) (*model.Ride, error) {
 	testRideMeta := model.RideMeta{
 		Distance:        100,
 		Duration:        60,
@@ -93,7 +92,7 @@ func createRide(mg *util.MongoClient) (*model.Ride, error) {
 	rideDate := time.Now()
 	testRideRecord := model.RideRecord{
 		ID:        rideId,
-		UserID:    testUser.ID,
+		UserID:    user.ID,
 		RideName:  rideName,
 		RideDate:  rideDate,
 		RideMeta:  testRideMeta,
@@ -126,40 +125,65 @@ func createRide(mg *util.MongoClient) (*model.Ride, error) {
 		},
 	}
 
-	_, err = mg.RideRecordsColl.InsertOne(context.TODO(), testRideRecord)
+	_, err := mg.RideRecordsColl.InsertOne(context.TODO(), testRideRecord)
 	if err != nil {
 		return nil, err
 	}
 
-	insertDocs := make([]interface{}, len(testRideData))
-	for x := range testRideData {
-		insertDocs = append(insertDocs, x)
+	var insertDocs []interface{}
+	for _, r := range testRideData {
+		insertDocs = append(insertDocs, r)
 	}
 	_, err = mg.RideDataColl.InsertMany(context.TODO(), insertDocs)
 	if err != nil {
 		return nil, err
 	}
 
-	return &model.Ride{
+	testRide := &model.Ride{
 		ID:        rideId,
 		RideName:  rideName,
 		RideDate:  rideDate,
 		RideMeta:  testRideMeta,
 		RideScore: testRideScore,
 		RideData:  testRideData,
-	}, nil
+	}
+
+	return testRide, nil
 }
 
 func TestMain(m *testing.M) {
-	initEnv()
+	initTestEnv()
+
+	// Prepare a fake user to pass the authentication middleware
+	testUserId := primitive.NewObjectID()
+	testUser = &model.User{
+		ID:        testUserId,
+		UserAlias: testUserId.Hex()[:8],
+		Email:     "test@domain.com",
+		Password:  "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
+	}
+
+	// Prepare authentication header for requests that require it
+	testToken := model.Token{}
+	err := testToken.CreateToken(testUser)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	authHeader = map[string]string{
+		"Authorization": "Bearer " + testToken.TokenString,
+	}
+
 	m.Run()
 }
 
-func TestAllEndpoints(t *testing.T) {
+func TestAllEndpointsNormal(t *testing.T) {
 	// Start new test server
 	mg := NewMockDB()
-	apiServer = NewTestServer(mg)
+	apiServer = NewTestServer(mg, middleware.AuthHandler(mg))
 	defer apiServer.Close()
+
+	var rr *httptest.ResponseRecorder
 
 	// Create credentials
 	credBody, err := json.Marshal(map[string]string{
@@ -171,7 +195,7 @@ func TestAllEndpoints(t *testing.T) {
 	}
 
 	// POST /auth/signup should return 201 (Created) and create new user
-	rr := sendRequestToMockServer(t, mg, "POST", "/auth/signup", bytes.NewBuffer(credBody), nil)
+	rr = sendRequestToMockServer(t, mg, "POST", "/auth/signup", bytes.NewBuffer(credBody), nil)
 	assert.Equal(t, http.StatusCreated, rr.Code)
 
 	// POST /auth/token should return 200 (OK) for valid credentials
@@ -253,4 +277,81 @@ func TestAllEndpoints(t *testing.T) {
 	// DELETE /rides/{id} should return 204 (No Content)
 	rr = sendRequestToMockServer(t, mg, "DELETE", "/rides/"+rideId, nil, headers)
 	assert.Equal(t, http.StatusNoContent, rr.Code)
+}
+
+func TestRides(t *testing.T) {
+	// Start new test server
+	mg := NewMockDB()
+	apiServer = NewTestServer(mg, middleware.AuthHandler(mg))
+	defer apiServer.Close()
+
+	var rr *httptest.ResponseRecorder
+
+	// GET /rides would return 401 (Unauthorized) with if user does not exist
+	rr = sendRequestToMockServer(t, mg, "GET", "/rides", nil, authHeader)
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
+
+	// Create test user in database
+	err := createTestUser(mg, testUser)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// GET /rides would return 200 (OK) with empty profile
+	rr = sendRequestToMockServer(t, mg, "GET", "/rides", nil, authHeader)
+	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
+func TestProfile(t *testing.T) {
+	// Start new test server
+	mg := NewMockDB()
+	apiServer = NewTestServer(mg, middleware.AuthHandler(mg))
+	defer apiServer.Close()
+
+	var rr *httptest.ResponseRecorder
+
+	// GET /profile/score would return 401 (Unauthorized) with if user does not exist
+	rr = sendRequestToMockServer(t, mg, "GET", "/profile/score", nil, authHeader)
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
+
+	// GET /profile/stats would return 401 (Unauthorized) with if user does not exist
+	rr = sendRequestToMockServer(t, mg, "GET", "/profile/stats", nil, authHeader)
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
+
+	// Create test user in database
+	err := createTestUser(mg, testUser)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// GET /profile/score would return 200 (OK) with empty profile
+	rr = sendRequestToMockServer(t, mg, "GET", "/profile/score", nil, authHeader)
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	// GET /profile/stat would return 200 (OK) with empty profile
+	rr = sendRequestToMockServer(t, mg, "GET", "/profile/stats", nil, authHeader)
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	// Create test ride in database
+	testRide, err := createTestRide(mg, testUser)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// GET /profile/score would return 200 (OK)
+	rr = sendRequestToMockServer(t, mg, "GET", "/profile/score", nil, authHeader)
+	var score model.RideScore
+	_ = unmarshalJSON(rr, &score)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, testRide.RideScore.Overall, score.Overall)
+
+	// GET /profile/stat would return 200 (OK)
+	rr = sendRequestToMockServer(t, mg, "GET", "/profile/stats", nil, authHeader)
+	var stats model.UserStats
+	_ = unmarshalJSON(rr, &stats)
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, 1, stats.RidesCount)
 }
