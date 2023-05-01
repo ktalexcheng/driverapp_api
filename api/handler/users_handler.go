@@ -137,6 +137,14 @@ func doGetUserScore(ctx context.Context, mg *util.MongoClient, useRecentRides in
 						},
 					},
 				},
+				"_sumProdComfort": bson.M{
+					"$sum": bson.M{
+						"$multiply": []string{
+							"$rideScore.comfort",
+							"$rideMeta.duration",
+						},
+					},
+				},
 			},
 		},
 		{
@@ -155,6 +163,9 @@ func doGetUserScore(ctx context.Context, mg *util.MongoClient, useRecentRides in
 				},
 				"speed": bson.M{
 					"$divide": []string{"$_sumProdSpeed", "$_totalDuration"},
+				},
+				"comfort": bson.M{
+					"$divide": []string{"$_sumProdComfort", "$_totalDuration"},
 				},
 			},
 		},

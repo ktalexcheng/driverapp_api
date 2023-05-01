@@ -126,6 +126,10 @@ func doSaveRideData(ctx context.Context, mg *util.MongoClient, body *map[string]
 			GyroscopeX:     datum["gyroscopeX"].(float64),
 			GyroscopeY:     datum["gyroscopeY"].(float64),
 			GyroscopeZ:     datum["gyroscopeZ"].(float64),
+			RotationX:      datum["rotationX"].(float64),
+			RotationY:      datum["rotationY"].(float64),
+			RotationZ:      datum["rotationZ"].(float64),
+			RotationW:      datum["rotationW"].(float64),
 		})
 	}
 

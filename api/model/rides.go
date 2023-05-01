@@ -28,6 +28,10 @@ type RideDatum struct {
 	GyroscopeX     float64            `bson:"gyroscopeX" json:"gyroscopeX"`
 	GyroscopeY     float64            `bson:"gyroscopeY" json:"gyroscopeY"`
 	GyroscopeZ     float64            `bson:"gyroscopeZ" json:"gyroscopeZ"`
+	RotationX      float64            `bson:"rotationX" json:"rotationX"`
+	RotationY      float64            `bson:"rotationY" json:"rotationY"`
+	RotationZ      float64            `bson:"rotationZ" json:"rotationZ"`
+	RotationW      float64            `bson:"rotationW" json:"rotationW"`
 }
 
 // Struct for rideMeta field in rideRecords documents
@@ -35,12 +39,14 @@ type RideMeta struct {
 	Distance        float64 `bson:"distance" json:"distance"`
 	Duration        float64 `bson:"duration" json:"duration"`
 	MaxAcceleration float64 `bson:"maxAcceleration" json:"maxAcceleration"`
+	AccelerationRMS float64 `bson:"accelerationRms" json:"accelerationRms"`
 }
 
 // Struct for rideScore field in rideRecords documents
 type RideScore struct {
 	Overall      float64 `bson:"overall" json:"overall"`
 	Speed        float64 `bson:"speed" json:"speed"`
+	Comfort      float64 `bson:"comfort" json:"comfort"`
 	Acceleration float64 `bson:"acceleration" json:"acceleration"`
 	Braking      float64 `bson:"braking" json:"braking"`
 	Cornering    float64 `bson:"cornering" json:"cornering"`
